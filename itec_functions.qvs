@@ -1,0 +1,348 @@
+/******************************************************************************************************************************************************
+	
+    Function: 		extract tables from a DB
+    Parameters:		_dbTableName			= full name of the db Table
+    				_fields					= Select the fields, * = all
+                    _connectionName			= lib name (connection string)
+                    _dropTable				= delete or keep table after load, 1 = delete, 0 = keep
+                    
+                    example:			iTECSQLextract('AdventureWorks.dbo.FactProductInventory', '*', 'Microsoft_SQL_Server_localhostsqlexpress',1);
+
+**************************************************************************************************************************************************************/
+
+Sub iTECSQLextract(_dbTableName, _fields, _connectionName, _dropTable)
+
+  LIB CONNECT TO '$(_connectionName)';
+
+  LET vTableName = SubField('$(_dbTableName)', '.', 3);
+  
+  LET itecTime = now();
+
+  TRACE INFO Table name: $(_dbTableName);
+  TRACE INFO Loaded Fields: $(_fields);
+  TRACE INFO Storage Path: $(vSc_PathExtract);
+  TRACE INFO Table name: $(itecTime);
+
+  $(_dbTableName):
+    LOAD $(_fields);
+    SELECT $(_fields)
+  FROM $(_dbTableName);
+	
+  LET itecTime = now();
+   TRACE INFO Table name: $(itecTime);
+  
+  STORE $(_dbTableName) INTO '$(vSc_PathExtract)/$(_dbTableName).qvd' (qvd);
+  
+  IF($(_dropTable)=1) THEN
+  	DROP TABLE $(_dbTableName);
+  END IF;
+  
+End sub;
+
+/******************************************************************************************************************************************************
+	
+    Function: 		create Variables
+    Parameters:		_sheetName			= name of the excel sheet
+    				_varName			= name of the column where the variable name is stored
+                    _varFormula			= name of the column where the variable formula is stored
+                    _activeFilter		= name of the column that defines if a variable should be loaded or not, 1 = 1 yes, others = no
+                    _pathDef			= define the lib path inclusive the excel name
+                    
+                    example:			iTECVariableCreator('Measures', 'Variable', 'Formula', 'Active', 'lib://Data/01_AdventureWork/00_Res/variables.xlsx');
+
+**************************************************************************************************************************************************************/
+
+sub iTECVariableCreator (_sheetName, _varName, _varFormula, _activeFilter, _pathDef)
+
+	TRACE *****************************************************************;
+    TRACE Info:		 Create Variables;
+	TRACE *****************************************************************;
+    
+    LET _tableName 		= 'Variables';
+	
+    '$(_tableName)':
+    LOAD
+      Name,
+      Variable,
+      Formula
+	FROM '$(_pathDef)'
+	(ooxml, embedded labels, table is $(_sheetName))
+    Where $(_activeFilter) = 1
+    ;
+     
+    LET vSc_iTECVariableCreator_NbrOfVariables = NoOfRows('$(_tableName)')-1;
+    LET vSc_iTECVariableCreator_NbrOfVariables2 = $(vS_Variable_Script_NoOfVariables)+2;
+
+    TRACE Info: Nbr. variables to create: $(vSc_iTECVariableCreator_NbrOfVariables2);
+    
+    For i = 0 to $(vSc_iTECVariableCreator_NbrOfVariables)
+
+        Let vSc_iTECVariableCreator_VarName  = Peek('$(_varName)', i, '$(_tableName)');
+        
+        if len('$(vS_Variable_Script_VarName)') > 0 then 
+          
+          LET [$(vSc_iTECVariableCreator_VarName)]   	= null();
+          LET [$(vSc_iTECVariableCreator_VarName)]   	= Peek('$(_varFormula)',i,'$(_tableName)');
+          LET vSc_iTECVariableCreator_NbrOfVariables2	= i+1;
+          
+         TRACE Info: Variable $(vS_Variable_Script_VarName) ($(vSc_iTECVariableCreator_NbrOfVariables2)) is created;
+        
+        End If
+        
+    Next i
+
+    Drop Table $(_tableName);
+    
+	LET vSc_iTECVariableCreator_NbrOfVariables 			= NULL();
+    LET vSc_iTECVariableCreator_NbrOfVariables2 		= NULL();
+   	LET i 												= NULL();
+    LET _tableName 										= NULL();
+    LET vSc_iTECVariableCreator_VarName					= NULL();
+
+End Sub;
+
+/******************************************************************************************************************************************************
+	
+    Function: 		creation of a time reporting table, the table contains easy selectable time periods such as: Today, Yesterday, Last Week, Rolling 7 Days ..
+    Parameters:		_KeyField				= name of the date key field, the base field for the creation of the table
+    				_DayOffset				= determine the current today date in the dashboard, as example if the dashboard is always loaded with the data from yesterday, then set _DayOffset to 1
+                    _ResidentTable			= Calendar Table that serves as base for this table
+                    
+                    example:			call iTEC_TimeReporting('KEY_Date', 0, 'CalendarDim');
+
+**************************************************************************************************************************************************************/
+
+SUB iTEC_TimePeriods(_KeyField, _DayOffset, _ResidentTable)
+
+	TRACE *****************************************************************;
+    TRACE Info:		 Create Time Reporting;
+	TRACE *****************************************************************;
+    
+    LET vSc_KeyField 				= '$(_KeyField)';
+    LET vSc_DayOffset 				= '$(_DayOffset)';
+    LET vSc_ResidentTable 			= '$(_ResidentTable)';
+
+	TRACE KEY_Field: $(vSc_KeyField);
+    TRACE Offset Date: $(vSc_DayOffset);
+
+
+  tmpTimePeriodsDim:
+  LOAD
+    $(vSc_KeyField)
+  ,If($(vSc_KeyField) = Date(Today(1)-$(vSc_DayOffset)),1) 																														AS "Today"
+  ,If($(vSc_KeyField) = Date(Today(1)-$(vSc_DayOffset)-1),1) 																														AS "Yesterday"
+  ,If(WEEK($(vSc_KeyField)) = WEEK(Today(1)-$(vSc_DayOffset)) AND (Year($(vSc_KeyField)) = YEAR(Today(1)-$(vSc_DayOffset))),1) 																			AS "Current week"
+  ,If(MONTH($(vSc_KeyField)) = MONTH(Today(1)-$(vSc_DayOffset)) AND (Year($(vSc_KeyField)) = YEAR(Today(1)-$(vSc_DayOffset))), 1) 																		AS "Current month"
+  ,If(YEAR($(vSc_KeyField)) = YEAR(Today(1)-$(vSc_DayOffset)) AND NUM(CEIL(NUM(MONTH($(vSc_KeyField)))/3),00)=NUM(CEIL(NUM(MONTH(Today(1)-$(vSc_DayOffset)))/3),00), 1) 								AS "Current quarter"
+  ,If(Year($(vSc_KeyField)) = YEAR(Today(1)-$(vSc_DayOffset)), 1) 																													AS "Current year"
+  ,If(WEEKSTART($(vSc_KeyField)) = WEEKSTART(Today(1)-$(vSc_DayOffset), -1),1) 																									AS "Last week"
+  ,If(MONTHSTART($(vSc_KeyField)) = MONTHSTART(Today(1)-$(vSc_DayOffset),-1), 1) 																									AS "Last month"
+  ,If(YEAR($(vSc_KeyField)) = YEAR(ADDMONTHS(Today(1)-$(vSc_DayOffset),-3)) AND NUM(CEIL(NUM(MONTH($(vSc_KeyField)))/3),00)=NUM(CEIL(NUM(MONTH(ADDMONTHS(Today(1)-$(vSc_DayOffset),-3)))/3),00), 1) 	AS "Last quarter"
+  ,If(Year($(vSc_KeyField)) = YEAR(ADDYEARS(Today(1)-$(vSc_DayOffset),-1)) , 1) 																									AS "Last year"
+  ,If(WEEKSTART($(vSc_KeyField)) = WEEKSTART(Today(1)-$(vSc_DayOffset), 1),1) 																										AS "Next week"
+  ,If(MONTHSTART($(vSc_KeyField)) = MONTHSTART(Today(1)-$(vSc_DayOffset),1), 1) 																									AS "Next month"
+  ,If(YEAR($(vSc_KeyField)) = YEAR(ADDMONTHS(Today(1)-$(vSc_DayOffset),3)) AND NUM(CEIL(NUM(MONTH($(vSc_KeyField)))/3),00)=NUM(CEIL(NUM(MONTH(ADDMONTHS(Today(1)-$(vSc_DayOffset),3)))/3),00), 1) 		AS "Next quarter"
+  ,If(Year($(vSc_KeyField)) = YEAR(ADDYEARS(Today(1)-$(vSc_DayOffset),1)) , 1) 																									AS "Next year"
+  ,If(WEEK($(vSc_KeyField)) = WEEK(Today(1)-$(vSc_DayOffset)) AND (Year($(vSc_KeyField)) = YEAR(Today(1)-$(vSc_DayOffset))) AND ($(vSc_KeyField) <= Today(1)-$(vSc_DayOffset)), 1) 											AS "Current week to date"
+  ,If(MONTH($(vSc_KeyField)) = MONTH(Today(1)-$(vSc_DayOffset)) AND (Year($(vSc_KeyField)) = YEAR(Today(1)-$(vSc_DayOffset))) AND ($(vSc_KeyField) <= Today(1)-$(vSc_DayOffset)), 1) 										AS "Current month to date"
+  ,If((YEAR($(vSc_KeyField)) = YEAR(Today(1)-$(vSc_DayOffset)) AND NUM(CEIL(NUM(MONTH($(vSc_KeyField)))/3),00)=NUM(CEIL(NUM(MONTH(Today(1)-$(vSc_DayOffset)))/3),00)) 
+      AND (DAYNUMBEROFQUARTER($(vSc_KeyField))<= DAYNUMBEROFQUARTER(Today(1)-$(vSc_DayOffset))), 1) 																				AS "Current quarter to date"
+  ,If(Year($(vSc_KeyField)) = YEAR(Today(1)-$(vSc_DayOffset)) AND $(vSc_KeyField) <= Today(1)-$(vSc_DayOffset), 1) 																						AS "Current year to date"
+  ,If(WEEKSTART($(vSc_KeyField)) = WEEKSTART(Today(1)-$(vSc_DayOffset), -1) AND (NUM(WEEKDAY($(vSc_KeyField))) <= NUM(WEEKDAY(Today(1)-$(vSc_DayOffset)-7))),1) 										AS "Last week to date"
+  ,If(MONTHSTART($(vSc_KeyField)) = MONTHSTART(Today(1)-$(vSc_DayOffset), -1) AND (DAY($(vSc_KeyField)) <= DAY(Today(1)-$(vSc_DayOffset))), 1) 															AS "Last month to date"
+  ,If((YEAR($(vSc_KeyField)) = YEAR(ADDMONTHS(Today(1)-$(vSc_DayOffset),-3)) AND NUM(CEIL(NUM(MONTH($(vSc_KeyField)))/3),00)=NUM(CEIL(NUM(MONTH(ADDMONTHS(Today(1)-$(vSc_DayOffset),-3)))/3),00)) 
+      AND (DAYNUMBEROFQUARTER($(vSc_KeyField), 1)<= DAYNUMBEROFQUARTER(Today(1)-$(vSc_DayOffset))), 1) 																			AS "Last quarter to date"
+  ,If(Year($(vSc_KeyField)) = YEAR(ADDYEARS(Today(1)-$(vSc_DayOffset),-1)) AND ($(vSc_KeyField) <= ADDYEARS(Today(1)-$(vSc_DayOffset),-1)), 1) 															AS "Last year to date"
+  ,If(WEEKSTART($(vSc_KeyField)) = WEEKSTART(Today(1)-$(vSc_DayOffset), 1) AND (NUM(WEEKDAY($(vSc_KeyField))) <= NUM(WEEKDAY(Today(1)-$(vSc_DayOffset)+7))),1) 											AS "Next week to date"
+  ,If(MONTHSTART($(vSc_KeyField)) = MONTHSTART(Today(1)-$(vSc_DayOffset), 1) AND (DAY($(vSc_KeyField)) <= DAY(Today(1)-$(vSc_DayOffset))), 1) 															AS "Next month to date"
+  ,If((YEAR($(vSc_KeyField)) = YEAR(ADDMONTHS(Today(1)-$(vSc_DayOffset),3)) AND NUM(CEIL(NUM(MONTH($(vSc_KeyField)))/3),00)=NUM(CEIL(NUM(MONTH(ADDMONTHS(Today(1)-$(vSc_DayOffset),3)))/3),00)) 
+      AND (DAYNUMBEROFQUARTER($(vSc_KeyField), 1)<= DAYNUMBEROFQUARTER(Today(1)-$(vSc_DayOffset))), 1) 																			AS "Next quarter to date"
+  ,If(Year($(vSc_KeyField)) = YEAR(ADDYEARS(Today(1)-$(vSc_DayOffset),1)) AND ($(vSc_KeyField) <= ADDYEARS(Today(1)-$(vSc_DayOffset),1)), 1) 															AS "Next year to date"
+  ,If($(vSc_KeyField) > Date(Today(1)-$(vSc_DayOffset)-7) AND $(vSc_KeyField) <= Date(Today(1)-$(vSc_DayOffset)), 1) 																					AS "Rolling 7 days"
+  ,If($(vSc_KeyField) > Date(Today(1)-$(vSc_DayOffset)-8) AND $(vSc_KeyField) <= Date(Today(1)-$(vSc_DayOffset)), 1) 																					AS "Rolling 8 days"
+  ,If($(vSc_KeyField) > Date(Today(1)-$(vSc_DayOffset)-14) AND $(vSc_KeyField) <= Date(Today(1)-$(vSc_DayOffset)), 1) 																					AS "Rolling 14 days"
+  ,If($(vSc_KeyField) > Date(Today(1)-$(vSc_DayOffset)-15) AND $(vSc_KeyField) <= Date(Today(1)-$(vSc_DayOffset)), 1) 																					AS "Rolling 15 days"
+  ,If(MONTHSTART($(vSc_KeyField)) > MONTHSTART(Today(1)-$(vSc_DayOffset), -3) AND $(vSc_KeyField) <= Date(Today(1)-$(vSc_DayOffset)), 1) 																AS "Rolling 3 months"
+  ,If(MONTHSTART($(vSc_KeyField)) > MONTHSTART(Today(1)-$(vSc_DayOffset), -6) AND $(vSc_KeyField) <= Date(Today(1)-$(vSc_DayOffset)), 1) 																AS "Rolling 6 months"
+  ,If(MONTHSTART($(vSc_KeyField)) > MONTHSTART(Today(1)-$(vSc_DayOffset), -9) AND $(vSc_KeyField) <= Date(Today(1)-$(vSc_DayOffset)), 1) 																AS "Rolling 9 months"
+  ,If(MONTHSTART($(vSc_KeyField)) > MONTHSTART(Today(1)-$(vSc_DayOffset), -12) AND $(vSc_KeyField) <= Date(Today(1)-$(vSc_DayOffset)), 1) 																AS "Rolling 12 months"
+  ,If(MONTHSTART($(vSc_KeyField)) > MONTHSTART(Today(1)-$(vSc_DayOffset), -13) AND $(vSc_KeyField) <= Date(Today(1)-$(vSc_DayOffset)), 1) 																AS "Rolling 13 months"
+  ,If(MONTHSTART($(vSc_KeyField)) > MONTHSTART(Today(1)-$(vSc_DayOffset), -15) AND $(vSc_KeyField) <= Date(Today(1)-$(vSc_DayOffset)), 1) 																AS "Rolling 15 months"
+  ,If(MONTHSTART($(vSc_KeyField)) > MONTHSTART(Today(1)-$(vSc_DayOffset), -18) AND $(vSc_KeyField) <= Date(Today(1)-$(vSc_DayOffset)), 1) 																AS "Rolling 18 months"
+  ,If(WEEKSTART($(vSc_KeyField)) > WEEKSTART(Today(1)-$(vSc_DayOffset), -3) AND $(vSc_KeyField) <= Date(Today(1)-$(vSc_DayOffset)), 1) 																	AS "Rolling 3 weeks"
+  ,If(WEEKSTART($(vSc_KeyField)) > WEEKSTART(Today(1)-$(vSc_DayOffset), -6) AND $(vSc_KeyField) <= Date(Today(1)-$(vSc_DayOffset)), 1) 																	AS "Rolling 6 weeks"
+  ,If(WEEKSTART($(vSc_KeyField)) > WEEKSTART(Today(1)-$(vSc_DayOffset), -9) AND $(vSc_KeyField) <= Date(Today(1)-$(vSc_DayOffset)), 1) 																	AS "Rolling 9 weeks"
+  ,If(WEEKSTART($(vSc_KeyField)) > WEEKSTART(Today(1)-$(vSc_DayOffset), -12) AND $(vSc_KeyField) <= Date(Today(1)-$(vSc_DayOffset)), 1) 																AS "Rolling 12 weeks"
+  ,If(WEEKSTART($(vSc_KeyField)) > WEEKSTART(Today(1)-$(vSc_DayOffset), -15) AND $(vSc_KeyField) <= Date(Today(1)-$(vSc_DayOffset)), 1) 																AS "Rolling 15 weeks"
+  ,If(WEEKSTART($(vSc_KeyField)) > WEEKSTART(Today(1)-$(vSc_DayOffset), -18) AND $(vSc_KeyField) <= Date(Today(1)-$(vSc_DayOffset)), 1) 																AS "Rolling 18 weeks"
+  ,If($(vSc_KeyField) > Date(Today(1)-$(vSc_DayOffset)),1) 																														AS "Future dates"
+  RESIDENT '$(vSc_ResidentTable)';
+
+  /********************************************************************************
+  **************************Create reporting period field**************************
+  ********************************************************************************/
+  FOR counter = 2 to NoOfFields('tmpTimePeriodsDim')
+
+   LET vSc_ReportPeriod 	= FieldName('$(counter)','tmpTimePeriodsDim');
+   LET vSc_FieldName 		= '['&FieldName('$(counter)','tmpTimePeriodsDim')&']';
+
+   [TimePeriodsDim]:
+   LOAD
+    $(vSc_KeyField),
+    '$(vSc_ReportPeriod)' AS "Report Period"
+   RESIDENT [tmpTimePeriodsDim]
+   WHERE $(vSc_FieldName) = 1;
+
+  NEXT;
+
+  //No longer require the [tmpTimePeriodsDim] table - removing from cache.
+  DROP TABLE [tmpTimePeriodsDim];
+
+  //No longer need the variables - setting them to null drops them.
+  vSc_ReportPeriod 				= NULL();
+  vSc_FieldName 				= NULL();
+  vSc_KeyField 					= NULL();
+  vSc_DayOffset 				= NULL();
+  vSc_ResidentTable				= NULL();
+
+END SUB; 
+
+
+/******************************************************************************************************************************************************
+	
+    Function: 		creation of the itec standard mastercalendar
+    Parameters:		_CalendarName			= the calendar name, exp. CalendarDim
+    				_KeyField				= link field to the calendar, has to be in the num date format : DD.MM.YYYY
+                    _MaxDate				= the max Date to load = usually max date available in the dataset, exp: $(vSc_MaxDate) / today() / '21.04.2020'
+                    _MinDate				= the min Date to load, '25.01.2015'
+                    _FieldLanguage			= field language, only EN or DE is possible
+                    _BusinessMonthOffset	= if the business has a different view on the dates as the source system, exp. january is for the business december then set 1
+                    _CreateTimePeriods		= create the time periods table based on the mastercalendar, 1 = create, 0 = do not (Time Periods table contains easy selectable time periods such as: Today, Yesterday, Last Week, Rolling 7 Days ..)
+                    
+                    example:			call iTEC_MasterCalendar('CalendarDim', 'KEY_Date', today(), $(vSc_MinDate), 0);
+
+**************************************************************************************************************************************************************/
+
+Sub iTEC_MasterCalendar(_CalendarName, _KeyField , _MaxDate, _MinDate, _FieldLanguage, _BusinessMonthOffset, _CreateTimePeriods)
+
+	TRACE *****************************************************************;
+    TRACE Info:		 Create Calendar;
+	TRACE *****************************************************************;
+    
+	LET vSc_BusinessMonthOffset 	= $(_BusinessMonthOffset);
+    LET vSc_MaxDate 				= Date('$(_MaxDate)');
+    LET vSc_MinDate 				= Date('$(_MinDate)');
+    LET vSc_DayOffset 				= Today(1)- '$(vSc_MaxDate)';
+
+	TRACE Max Date to Load: $(vSc_MaxDate);
+	TRACE Min Date to Load:	$(vSc_MinDate);
+	TRACE Business Offset Month: $(vSc_BusinessMonthOffset);
+
+  '$(_CalendarName)':
+    Load
+     *
+     ,Year(Date)																																			AS [Year] 
+     ,If(Num(Month(Date))<7,1,2) 																															AS [Half of the year]
+     ,Dual('Q'&Num(Ceil(Num(Month(Date))/3)),Num(Ceil(Num(Month(Date))/3),00)) 																				AS [Quarter]
+     ,Dual('Q'&Num(Ceil(Num(Month(Date))/3))&'-'&Year(Date),QuarterStart(Date)) 																			AS [Quarter Year]
+     ,Dual(Month(Date)&' - '& Year(Date),MonthStart(Date)) 																									AS [Month Year]
+     ,Dual(Num(Month(Date)) &'-'& Year(Date),MonthStart(Date)) 																								AS [Period Year]
+     ,Dual(Month(Date),Num(Month(Date))) 																													AS [Month]
+     ,Num(Month(Date)) 																																		AS [Month Nbr] 
+     ,Dual('W'&Num(Week(Date,0,0),00)&'-'& WeekStart(Date),WeekStart(Date)) 																				AS [Week Year]
+     ,Dual('W'&Num(Week(Date),00),Week(Date)) 																												AS [Week]
+     ,Dual(WeekDay(Date),Num(WeekDay(Date)+1)) 																												AS [Week Day] 
+     ,DayNumberOfYear(Date) 																																AS [Day Nbr of Year]
+     ,If(Year(Today(1)-$(vSc_DayOffset))-Year(Date) >= 0,Year(Today(1)-$(vSc_DayOffset))-Year(Date)) 														AS _PastYears
+     ,If(4*Year(Today(1)-$(vSc_DayOffset))+Ceil(Month(Today(1)-$(vSc_DayOffset))/3)-4*Year(Date)-Ceil(Month(Date)/3) >= 0,
+        4*Year(Today(1)-$(vSc_DayOffset))+Ceil(Month(Today(1)-$(vSc_DayOffset))/3)-4*Year(Date)-Ceil(Month(Date)/3)) 										AS _PastQuarters 
+     ,If(12*Year(Today(1)-$(vSc_DayOffset))+Month(Today(1)-$(vSc_DayOffset))
+        -12*Year(Date)-Month(Date) >= 0,12*Year(Today(1)-$(vSc_DayOffset))+Month(Today(1)-$(vSc_DayOffset))-12*Year(Date)-Month(Date))  					AS _PastMonths
+     ,If((WeekStart(Today(1)-$(vSc_DayOffset))-WeekStart(Date))/7 >= 0,(WeekStart(Today(1)-$(vSc_DayOffset))-WeekStart(Date))/7)							AS _PastWeeks
+     ,If(Today(1)-$(vSc_DayOffset)-Date >= 0,Today(1)-$(vSc_DayOffset)-Date) 																				AS _PastDays
+     ,If (DayNumberOfYear(Date) <= DayNumberOfYear(Today(1)-$(vSc_DayOffset)),1,0) 																			AS _InYTD
+     ,If(DayNumberOfQuarter(Date) <= DayNumberOfQuarter(Today(1)-$(vSc_DayOffset)),1,0) 																	AS _InQTD
+     ,If(Day(Date)<=Day(Today(1)-$(vSc_DayOffset)),1,0) 																									AS _InMTD
+     ,If(WeekDay(Date)<=WeekDay(Today(1)-$(vSc_DayOffset)),1,0) 																							AS _InWTD
+     ;
+    Load
+     Date(tmpDate, 'DD.MM.YYYY')																															AS 	'$(_KeyField)'	
+     ,Date(tmpDate) 																																		AS [Origin Date]
+     ,AddMonths(tmpDate,$(vBusinessMonthOffset))																											AS [Date]
+     ;
+    LOAD 
+       IterNo() 																																			AS IterNo,
+       Date('$(vSc_MinDate)' + IterNo()-1) 																													AS tmpDate
+    AutoGenerate(1)
+    While ('$(vSc_MinDate)' + IterNo()-1) <= '$(vSc_MaxDate)';
+
+  IF '$(_FieldLanguage)' = 'DE' THEN
+      Rename Field Date 						to Datum;
+      Rename Field [Origin Date] 				to [orginal Datum];
+      Rename Field Year 						to Jahr;
+      Rename Field [Half of the year] 			to Jahreshälfte;
+      Rename Field Quarter 						to Quartal;
+      Rename Field [Quarter Year] 				to Quartalsjahr;
+      Rename Field [Month Year] 				to Monatsjahr;
+      Rename Field [Period Year] 				to Periode;
+      Rename Field Month 						to Monat;
+      Rename Field [Month Nbr] 					to Monatsnummer;
+      Rename Field [Week Year] 					to Kalenderwoche;
+      Rename Field Week 						to Woche;
+      Rename Field [Week Day] 					to Wochentag;
+      Rename Field [Day Nbr of Year] 			to [Tagesnummer im Jahr];
+  END IF;
+  
+  call iTEC_TimePeriods('$(_KeyField)', '$(vSc_DayOffset)', '$(_CalendarName)');
+  
+  vSc_BusinessMonthOffset 	= NULL();
+  vSc_MaxDate 				= NULL();
+  vSc_MinDate 				= NULL();
+  vSc_DayOffset 			= NULL();
+
+
+END SUB;
+
+/******************************************************************************************************************************************************
+	
+    Function: 		Create a log File that tracks the load time per every call of the functions and save it in a file
+    Parameters:		_StepDesc		= set a description
+                    _IsInit			= if = 1, then set reload time = now - should only be set for the initial one
+                    _StoreTable		= if = 1, then save and store the table somewhere
+                    _StoreLocation	= save location of the function
+                    
+                    example:			CALL iTEC_ReloadTimeTracking(1,'TEST',1,1,'lib://DEV-FINANCE_Root/InputData/OneStreamExport/OneStreamFileExport/Quarterly/_Archive');
+
+**************************************************************************************************************************************************************/
+
+SUB iTEC_ReloadTimeTracking(_StepDesc, _IsInit,_StoreTable, _StoreLocation)
+
+  IF $(_IsInit) = 1 THEN
+	TRACE SET RELOAD TIME TO START;
+    LET vL_Var_StartReload 	= now();
+    LET vL_Var_PreviousStep = now();
+    LET vL_Var_StepNr 		= 0;
+    
+  END IF;
+  
+  LET vL_Var_StepNr 		= $(vL_Var_StepNr) + 1;
+  LET vL_Var_CurrentStep	= now();
+  LET vL_Var_PreviousStep 	= if($(_IsInit) = 1, '$(vL_Var_StartReload)', '$(vL_VarPreviousStep)');
+  
+  RELOAD_FILE_LOG:
+  LOAD $(vL_Var_StepNr)					       										AS LOAD_STEP_NR,
+       Interval('$(vL_Var_CurrentStep)'- '$(vL_Var_PreviousStep)', 'hh:mm:ss')		AS LOAD_TIME_STEP,
+       Interval('$(vL_Var_CurrentStep)'- '$(vL_Var_StartReload)', 'hh:mm:ss') 		AS LOAD_TIME_TOTAL,
+       '$(vL_Var_CurrentStep)'						  								AS LOAD_TIME_STAMP,
+       '$(_StepDesc)'																as LOAD_STEP_DESC
+  AutoGenerate(1);
+
+  IF $(_StoreTable) = 1 THEN
+    TRACE STORE RELOAD LOG FILE;
+    STORE RELOAD_FILE_LOG INTO  [$(_StoreLocation)/RELOAD_FILE_LOG.TXT] (TXT);
+	
+  END IF;
+  
+  LET vL_Var_PreviousStep = '$(vL_Var_CurrentStep)';
+  
+END SUB;
