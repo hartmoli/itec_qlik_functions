@@ -327,7 +327,7 @@ SUB iTEC_ReloadTimeTracking(_StepDesc, _IsInit,_StoreTable, _StoreLocation)
   
   LET vL_Var_StepNr 		= $(vL_Var_StepNr) + 1;
   LET vL_Var_CurrentStep	= now();
-  LET vL_Var_PreviousStep 	= if($(_IsInit) = 1, '$(vL_Var_StartReload)', '$(vL_VarPreviousStep)');
+  LET vL_Var_PreviousStep 	= if($(_IsInit) = 1, '$(vL_Var_StartReload)', '$(vL_Var_PreviousStepPrev)');
   
   RELOAD_FILE_LOG:
   LOAD $(vL_Var_StepNr)					       										AS LOAD_STEP_NR,
@@ -343,6 +343,6 @@ SUB iTEC_ReloadTimeTracking(_StepDesc, _IsInit,_StoreTable, _StoreLocation)
 	
   END IF;
   
-  LET vL_Var_PreviousStep = '$(vL_Var_CurrentStep)';
+  LET vL_Var_PreviousStepPrev = '$(vL_Var_CurrentStep)';
   
 END SUB;
