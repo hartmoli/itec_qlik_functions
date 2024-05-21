@@ -1,10 +1,10 @@
 /******************************************************************************************************************************************************
 	
-    Function: 		extract tables from a DB
-    Parameters:		_dbTableName			= full name of the db Table
-    				_fields					= Select the fields, * = all
+    Function: 		  extract tables from a DB
+    Parameters:		  _dbTableName			  = full name of the db Table
+    				        _fields					    = Select the fields, * = all
                     _connectionName			= lib name (connection string)
-                    _dropTable				= delete or keep table after load, 1 = delete, 0 = keep
+                    _dropTable				  = delete or keep table after load, 1 = delete, 0 = keep
                     
                     example:			iTECSQLextract('AdventureWorks.dbo.FactProductInventory', '*', 'Microsoft_SQL_Server_localhostsqlexpress',1);
 
@@ -41,9 +41,9 @@ End sub;
 
 /******************************************************************************************************************************************************
 	
-    Function: 		create Variables
-    Parameters:		_sheetName			= name of the excel sheet
-    				_varName			= name of the column where the variable name is stored
+    Function: 		  create Variables
+    Parameters:		  _sheetName			= name of the excel sheet
+    				        _varName			= name of the column where the variable name is stored
                     _varFormula			= name of the column where the variable formula is stored
                     _activeFilter		= name of the column that defines if a variable should be loaded or not, 1 = 1 yes, others = no
                     _pathDef			= define the lib path inclusive the excel name
@@ -242,17 +242,27 @@ Sub iTEC_MasterCalendar(_CalendarName, _KeyField , _MaxDate, _MinDate, _FieldLan
     Load
      *
      ,Year(Date)																																			AS [Year] 
+     ,Autonumber(Date,'Date') 																																AS [DateID]
      ,If(Num(Month(Date))<7,1,2) 																															AS [Half of the year]
      ,Dual('Q'&Num(Ceil(Num(Month(Date))/3)),Num(Ceil(Num(Month(Date))/3),00)) 																				AS [Quarter]
      ,Dual('Q'&Num(Ceil(Num(Month(Date))/3))&'-'&Year(Date),QuarterStart(Date)) 																			AS [Quarter Year]
+     ,DayNumberOfQuarter(Date) 																																AS [Quarter Day Nbr]
+     ,Autonumber(Num(Ceil(Num(Month(Date))/3))&' - '& Year(Date),'Quarter') 																				AS [QuarterID]
+      ,if(floor(Date) = floor(QuarterEnd(Date)), 92,DayNumberOfQuarter(Date))																				AS [QTDDayNbr]
      ,Dual(Month(Date)&' - '& Year(Date),MonthStart(Date)) 																									AS [Month Year]
      ,Dual(Num(Month(Date)) &'-'& Year(Date),MonthStart(Date)) 																								AS [Period Year]
+     ,Autonumber(Month(Date)&' - '& Year(Date),'Month') 																									AS [MonthID]
      ,Dual(Month(Date),Num(Month(Date))) 																													AS [Month]
+     ,Num(Day(Date)) 																																		AS [Month Day Nbr]
+     ,if(floor(Date) = floor(MonthEnd(Date)), 31,day(Date))																									AS [MTDDayNbr]
      ,Num(Month(Date)) 																																		AS [Month Nbr] 
      ,Dual('W'&Num(Week(Date,0,0),00)&'-'& WeekStart(Date),WeekStart(Date)) 																				AS [Week Year]
      ,Dual('W'&Num(Week(Date),00),Week(Date)) 																												AS [Week]
+     ,Autonumber(Num(Week(Date,0,0),00)&' - '& WeekStart(Date),'Week') 																						AS [WeekID]
+     ,Num(Week(Date,0,0),00)																																AS [Week Nbr]
      ,Dual(WeekDay(Date),Num(WeekDay(Date)+1)) 																												AS [Week Day] 
-     ,DayNumberOfYear(Date) 																																AS [Day Nbr of Year]
+     ,WeekDay(Date)+1 																																		AS [Week Day Nbr] 
+     ,DayNumberOfYear(Date) 																																AS [Day Nbr]
      ,If(Year(Today(1)-$(vSc_DayOffset))-Year(Date) >= 0,Year(Today(1)-$(vSc_DayOffset))-Year(Date)) 														AS _PastYears
      ,If(4*Year(Today(1)-$(vSc_DayOffset))+Ceil(Month(Today(1)-$(vSc_DayOffset))/3)-4*Year(Date)-Ceil(Month(Date)/3) >= 0,
         4*Year(Today(1)-$(vSc_DayOffset))+Ceil(Month(Today(1)-$(vSc_DayOffset))/3)-4*Year(Date)-Ceil(Month(Date)/3)) 										AS _PastQuarters 
@@ -260,7 +270,9 @@ Sub iTEC_MasterCalendar(_CalendarName, _KeyField , _MaxDate, _MinDate, _FieldLan
         -12*Year(Date)-Month(Date) >= 0,12*Year(Today(1)-$(vSc_DayOffset))+Month(Today(1)-$(vSc_DayOffset))-12*Year(Date)-Month(Date))  					AS _PastMonths
      ,If((WeekStart(Today(1)-$(vSc_DayOffset))-WeekStart(Date))/7 >= 0,(WeekStart(Today(1)-$(vSc_DayOffset))-WeekStart(Date))/7)							AS _PastWeeks
      ,If(Today(1)-$(vSc_DayOffset)-Date >= 0,Today(1)-$(vSc_DayOffset)-Date) 																				AS _PastDays
-     ,If (DayNumberOfYear(Date) <= DayNumberOfYear(Today(1)-$(vSc_DayOffset)),1,0) 																			AS _InYTD
+     ,If(DayNumberOfYear(Date) <= DayNumberOfYear(Today(1)-$(vSc_DayOffset)),1,0) 																			AS _InYTD
+     ,DayNumberOfYear(Date) 																																AS _InYTDNumberofDay
+     ,DayNumberOfYear(Today(1) )																															AS _InYTDNumberofDayToday
      ,If(DayNumberOfQuarter(Date) <= DayNumberOfQuarter(Today(1)-$(vSc_DayOffset)),1,0) 																	AS _InQTD
      ,If(Day(Date)<=Day(Today(1)-$(vSc_DayOffset)),1,0) 																									AS _InMTD
      ,If(WeekDay(Date)<=WeekDay(Today(1)-$(vSc_DayOffset)),1,0) 																							AS _InWTD
@@ -293,13 +305,17 @@ Sub iTEC_MasterCalendar(_CalendarName, _KeyField , _MaxDate, _MinDate, _FieldLan
       Rename Field [Day Nbr of Year] 			to [Tagesnummer im Jahr];
   END IF;
   
-  call iTEC_TimePeriods('$(_KeyField)', '$(vSc_DayOffset)', '$(_CalendarName)');
+  //check if Time Periods table should be loaded or not
+  IF '$(_CreateTimePeriods)' = 1 THEN
+  	
+  	call iTEC_TimePeriods('$(_KeyField)', '$(vSc_DayOffset)', '$(_CalendarName)');
+  
+  END IF;
   
   vSc_BusinessMonthOffset 	= NULL();
   vSc_MaxDate 				= NULL();
   vSc_MinDate 				= NULL();
   vSc_DayOffset 			= NULL();
-
 
 END SUB;
 

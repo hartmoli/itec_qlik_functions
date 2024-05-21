@@ -11,6 +11,7 @@ This project aims to provide a set of reusable functions for Qlik users to enhan
 - iTECVariableCreator - to create variables based on an excel file
 - iTEC_TimeReporting - creation of a time reporting table, the table contains easy selectable time periods
 - iTEC_MasterCalendar - creation of a master-default calendar
+- iTEC_ReloadTimeTracking - Creates a log File that tracks the load time per every call of the functions and save it in a file
 
 ## Getting Started
 
