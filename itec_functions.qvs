@@ -129,34 +129,34 @@ SUB iTEC_TimePeriods(_KeyField, _DayOffset, _ResidentTable)
   tmpTimePeriodsDim:
   LOAD
     $(vSc_KeyField)
-  ,If($(vSc_KeyField) = Date(Today(1)-$(vSc_DayOffset)),1) 																														AS "Today"
-  ,If($(vSc_KeyField) = Date(Today(1)-$(vSc_DayOffset)-1),1) 																														AS "Yesterday"
+  ,If($(vSc_KeyField) = Date(Today(1)-$(vSc_DayOffset)),1) 																																				AS "Today"
+  ,If($(vSc_KeyField) = Date(Today(1)-$(vSc_DayOffset)-1),1) 																																			AS "Yesterday"
   ,If(WEEK($(vSc_KeyField)) = WEEK(Today(1)-$(vSc_DayOffset)) AND (Year($(vSc_KeyField)) = YEAR(Today(1)-$(vSc_DayOffset))),1) 																			AS "Current week"
   ,If(MONTH($(vSc_KeyField)) = MONTH(Today(1)-$(vSc_DayOffset)) AND (Year($(vSc_KeyField)) = YEAR(Today(1)-$(vSc_DayOffset))), 1) 																		AS "Current month"
   ,If(YEAR($(vSc_KeyField)) = YEAR(Today(1)-$(vSc_DayOffset)) AND NUM(CEIL(NUM(MONTH($(vSc_KeyField)))/3),00)=NUM(CEIL(NUM(MONTH(Today(1)-$(vSc_DayOffset)))/3),00), 1) 								AS "Current quarter"
-  ,If(Year($(vSc_KeyField)) = YEAR(Today(1)-$(vSc_DayOffset)), 1) 																													AS "Current year"
-  ,If(WEEKSTART($(vSc_KeyField)) = WEEKSTART(Today(1)-$(vSc_DayOffset), -1),1) 																									AS "Last week"
-  ,If(MONTHSTART($(vSc_KeyField)) = MONTHSTART(Today(1)-$(vSc_DayOffset),-1), 1) 																									AS "Last month"
+  ,If(Year($(vSc_KeyField)) = YEAR(Today(1)-$(vSc_DayOffset)), 1) 																																		AS "Current year"
+  ,If(WEEKSTART($(vSc_KeyField)) = WEEKSTART(Today(1)-$(vSc_DayOffset), -1),1) 																															AS "Last week"
+  ,If(MONTHSTART($(vSc_KeyField)) = MONTHSTART(Today(1)-$(vSc_DayOffset),-1), 1) 																														AS "Last month"
   ,If(YEAR($(vSc_KeyField)) = YEAR(ADDMONTHS(Today(1)-$(vSc_DayOffset),-3)) AND NUM(CEIL(NUM(MONTH($(vSc_KeyField)))/3),00)=NUM(CEIL(NUM(MONTH(ADDMONTHS(Today(1)-$(vSc_DayOffset),-3)))/3),00), 1) 	AS "Last quarter"
-  ,If(Year($(vSc_KeyField)) = YEAR(ADDYEARS(Today(1)-$(vSc_DayOffset),-1)) , 1) 																									AS "Last year"
-  ,If(WEEKSTART($(vSc_KeyField)) = WEEKSTART(Today(1)-$(vSc_DayOffset), 1),1) 																										AS "Next week"
-  ,If(MONTHSTART($(vSc_KeyField)) = MONTHSTART(Today(1)-$(vSc_DayOffset),1), 1) 																									AS "Next month"
+  ,If(Year($(vSc_KeyField)) = YEAR(ADDYEARS(Today(1)-$(vSc_DayOffset),-1)) , 1) 																														AS "Last year"
+  ,If(WEEKSTART($(vSc_KeyField)) = WEEKSTART(Today(1)-$(vSc_DayOffset), 1),1) 																															AS "Next week"
+  ,If(MONTHSTART($(vSc_KeyField)) = MONTHSTART(Today(1)-$(vSc_DayOffset),1), 1) 																														AS "Next month"
   ,If(YEAR($(vSc_KeyField)) = YEAR(ADDMONTHS(Today(1)-$(vSc_DayOffset),3)) AND NUM(CEIL(NUM(MONTH($(vSc_KeyField)))/3),00)=NUM(CEIL(NUM(MONTH(ADDMONTHS(Today(1)-$(vSc_DayOffset),3)))/3),00), 1) 		AS "Next quarter"
-  ,If(Year($(vSc_KeyField)) = YEAR(ADDYEARS(Today(1)-$(vSc_DayOffset),1)) , 1) 																									AS "Next year"
-  ,If(WEEK($(vSc_KeyField)) = WEEK(Today(1)-$(vSc_DayOffset)) AND (Year($(vSc_KeyField)) = YEAR(Today(1)-$(vSc_DayOffset))) AND ($(vSc_KeyField) <= Today(1)-$(vSc_DayOffset)), 1) 											AS "Current week to date"
-  ,If(MONTH($(vSc_KeyField)) = MONTH(Today(1)-$(vSc_DayOffset)) AND (Year($(vSc_KeyField)) = YEAR(Today(1)-$(vSc_DayOffset))) AND ($(vSc_KeyField) <= Today(1)-$(vSc_DayOffset)), 1) 										AS "Current month to date"
+  ,If(Year($(vSc_KeyField)) = YEAR(ADDYEARS(Today(1)-$(vSc_DayOffset),1)) , 1) 																															AS "Next year"
+  ,If(WEEK($(vSc_KeyField)) = WEEK(Today(1)-$(vSc_DayOffset)) AND (Year($(vSc_KeyField)) = YEAR(Today(1)-$(vSc_DayOffset))) AND ($(vSc_KeyField) <= Today(1)-$(vSc_DayOffset)), 1) 						AS "Current week to date"
+  ,If(MONTH($(vSc_KeyField)) = MONTH(Today(1)-$(vSc_DayOffset)) AND (Year($(vSc_KeyField)) = YEAR(Today(1)-$(vSc_DayOffset))) AND ($(vSc_KeyField) <= Today(1)-$(vSc_DayOffset)), 1) 					AS "Current month to date"
   ,If((YEAR($(vSc_KeyField)) = YEAR(Today(1)-$(vSc_DayOffset)) AND NUM(CEIL(NUM(MONTH($(vSc_KeyField)))/3),00)=NUM(CEIL(NUM(MONTH(Today(1)-$(vSc_DayOffset)))/3),00)) 
-      AND (DAYNUMBEROFQUARTER($(vSc_KeyField))<= DAYNUMBEROFQUARTER(Today(1)-$(vSc_DayOffset))), 1) 																				AS "Current quarter to date"
+      AND (DAYNUMBEROFQUARTER($(vSc_KeyField))<= DAYNUMBEROFQUARTER(Today(1)-$(vSc_DayOffset))), 1) 																									AS "Current quarter to date"
   ,If(Year($(vSc_KeyField)) = YEAR(Today(1)-$(vSc_DayOffset)) AND $(vSc_KeyField) <= Today(1)-$(vSc_DayOffset), 1) 																						AS "Current year to date"
   ,If(WEEKSTART($(vSc_KeyField)) = WEEKSTART(Today(1)-$(vSc_DayOffset), -1) AND (NUM(WEEKDAY($(vSc_KeyField))) <= NUM(WEEKDAY(Today(1)-$(vSc_DayOffset)-7))),1) 										AS "Last week to date"
   ,If(MONTHSTART($(vSc_KeyField)) = MONTHSTART(Today(1)-$(vSc_DayOffset), -1) AND (DAY($(vSc_KeyField)) <= DAY(Today(1)-$(vSc_DayOffset))), 1) 															AS "Last month to date"
   ,If((YEAR($(vSc_KeyField)) = YEAR(ADDMONTHS(Today(1)-$(vSc_DayOffset),-3)) AND NUM(CEIL(NUM(MONTH($(vSc_KeyField)))/3),00)=NUM(CEIL(NUM(MONTH(ADDMONTHS(Today(1)-$(vSc_DayOffset),-3)))/3),00)) 
-      AND (DAYNUMBEROFQUARTER($(vSc_KeyField), 1)<= DAYNUMBEROFQUARTER(Today(1)-$(vSc_DayOffset))), 1) 																			AS "Last quarter to date"
+      AND (DAYNUMBEROFQUARTER($(vSc_KeyField), 1)<= DAYNUMBEROFQUARTER(Today(1)-$(vSc_DayOffset))), 1) 																									AS "Last quarter to date"
   ,If(Year($(vSc_KeyField)) = YEAR(ADDYEARS(Today(1)-$(vSc_DayOffset),-1)) AND ($(vSc_KeyField) <= ADDYEARS(Today(1)-$(vSc_DayOffset),-1)), 1) 															AS "Last year to date"
   ,If(WEEKSTART($(vSc_KeyField)) = WEEKSTART(Today(1)-$(vSc_DayOffset), 1) AND (NUM(WEEKDAY($(vSc_KeyField))) <= NUM(WEEKDAY(Today(1)-$(vSc_DayOffset)+7))),1) 											AS "Next week to date"
   ,If(MONTHSTART($(vSc_KeyField)) = MONTHSTART(Today(1)-$(vSc_DayOffset), 1) AND (DAY($(vSc_KeyField)) <= DAY(Today(1)-$(vSc_DayOffset))), 1) 															AS "Next month to date"
   ,If((YEAR($(vSc_KeyField)) = YEAR(ADDMONTHS(Today(1)-$(vSc_DayOffset),3)) AND NUM(CEIL(NUM(MONTH($(vSc_KeyField)))/3),00)=NUM(CEIL(NUM(MONTH(ADDMONTHS(Today(1)-$(vSc_DayOffset),3)))/3),00)) 
-      AND (DAYNUMBEROFQUARTER($(vSc_KeyField), 1)<= DAYNUMBEROFQUARTER(Today(1)-$(vSc_DayOffset))), 1) 																			AS "Next quarter to date"
+      AND (DAYNUMBEROFQUARTER($(vSc_KeyField), 1)<= DAYNUMBEROFQUARTER(Today(1)-$(vSc_DayOffset))), 1) 																									AS "Next quarter to date"
   ,If(Year($(vSc_KeyField)) = YEAR(ADDYEARS(Today(1)-$(vSc_DayOffset),1)) AND ($(vSc_KeyField) <= ADDYEARS(Today(1)-$(vSc_DayOffset),1)), 1) 															AS "Next year to date"
   ,If($(vSc_KeyField) > Date(Today(1)-$(vSc_DayOffset)-7) AND $(vSc_KeyField) <= Date(Today(1)-$(vSc_DayOffset)), 1) 																					AS "Rolling 7 days"
   ,If($(vSc_KeyField) > Date(Today(1)-$(vSc_DayOffset)-8) AND $(vSc_KeyField) <= Date(Today(1)-$(vSc_DayOffset)), 1) 																					AS "Rolling 8 days"
@@ -175,7 +175,7 @@ SUB iTEC_TimePeriods(_KeyField, _DayOffset, _ResidentTable)
   ,If(WEEKSTART($(vSc_KeyField)) > WEEKSTART(Today(1)-$(vSc_DayOffset), -12) AND $(vSc_KeyField) <= Date(Today(1)-$(vSc_DayOffset)), 1) 																AS "Rolling 12 weeks"
   ,If(WEEKSTART($(vSc_KeyField)) > WEEKSTART(Today(1)-$(vSc_DayOffset), -15) AND $(vSc_KeyField) <= Date(Today(1)-$(vSc_DayOffset)), 1) 																AS "Rolling 15 weeks"
   ,If(WEEKSTART($(vSc_KeyField)) > WEEKSTART(Today(1)-$(vSc_DayOffset), -18) AND $(vSc_KeyField) <= Date(Today(1)-$(vSc_DayOffset)), 1) 																AS "Rolling 18 weeks"
-  ,If($(vSc_KeyField) > Date(Today(1)-$(vSc_DayOffset)),1) 																														AS "Future dates"
+  ,If($(vSc_KeyField) > Date(Today(1)-$(vSc_DayOffset)),1) 																																				AS "Future dates"
   RESIDENT '$(vSc_ResidentTable)';
 
   /********************************************************************************
@@ -211,19 +211,20 @@ END SUB;
 /******************************************************************************************************************************************************
 	
     Function: 		creation of the itec standard mastercalendar
-    Parameters:		_CalendarName			= the calendar name, exp. CalendarDim
-    				_KeyField				= link field to the calendar, has to be in the num date format : DD.MM.YYYY
-                    _MaxDate				= the max Date to load = usually max date available in the dataset, exp: $(vSc_MaxDate) / today() / '21.04.2020'
-                    _MinDate				= the min Date to load, '25.01.2015'
-                    _FieldLanguage			= field language, only EN or DE is possible
-                    _BusinessMonthOffset	= if the business has a different view on the dates as the source system, exp. january is for the business december then set 1
-                    _CreateTimePeriods		= create the time periods table based on the mastercalendar, 1 = create, 0 = do not (Time Periods table contains easy selectable time periods such as: Today, Yesterday, Last Week, Rolling 7 Days ..)
+    Parameters:		_CalendarName				= the calendar name, exp. CalendarDim
+    				_KeyField					= link field to the calendar, has to be in the num date format : DD.MM.YYYY
+                    _MaxDate					= the max Date to load = usually max date available in the dataset, exp: $(vSc_MaxDate) / today() / '21.04.2020'
+                    _MinDate					= the min Date to load, '25.01.2015'
+                    _FieldLanguage				= field language, only EN or DE is possible
+                    _BusinessMonthOffset		= if the business has a different view on the dates as the source system, exp. january is for the business december then set 1
+                    _CreateTimePeriods			= create the time periods table based on the mastercalendar, 1 = create, 0 = do not (Time Periods table contains easy selectable time periods such as: Today, Yesterday, Last Week, Rolling 7 Days ..)
+                    _ShowHideTechnicalFields	= if set = 1 then all the technial Calendar fields such as DateId, MonthID and so on are hidden 
                     
                     example:			call iTEC_MasterCalendar('CalendarDim', 'KEY_Date', today(), $(vSc_MinDate), 0);
 
 **************************************************************************************************************************************************************/
 
-Sub iTEC_MasterCalendar(_CalendarName, _KeyField , _MaxDate, _MinDate, _FieldLanguage, _BusinessMonthOffset, _CreateTimePeriods)
+Sub iTEC_MasterCalendar(_CalendarName, _KeyField , _MaxDate, _MinDate, _FieldLanguage, _BusinessMonthOffset, _CreateTimePeriods, _ShowHideTechnicalFields)
 
 	TRACE *****************************************************************;
     TRACE Info:		 Create Calendar;
@@ -242,7 +243,7 @@ Sub iTEC_MasterCalendar(_CalendarName, _KeyField , _MaxDate, _MinDate, _FieldLan
     Load
      *
      ,Year(Date)																																			AS [Year] 
-     ,Autonumber(Date,'Date') 																																AS [DateID]
+     ,Floor(num(Date)) 																																		AS [DateID]
      ,If(Num(Month(Date))<7,1,2) 																															AS [Half of the year]
      ,Dual('Q'&Num(Ceil(Num(Month(Date))/3)),Num(Ceil(Num(Month(Date))/3),00)) 																				AS [Quarter]
      ,Dual('Q'&Num(Ceil(Num(Month(Date))/3))&'-'&Year(Date),QuarterStart(Date)) 																			AS [Quarter Year]
@@ -252,11 +253,12 @@ Sub iTEC_MasterCalendar(_CalendarName, _KeyField , _MaxDate, _MinDate, _FieldLan
      ,Dual(Month(Date)&' - '& Year(Date),MonthStart(Date)) 																									AS [Month Year]
      ,Dual(Num(Month(Date)) &'-'& Year(Date),MonthStart(Date)) 																								AS [Period Year]
      ,Autonumber(Month(Date)&' - '& Year(Date),'Month') 																									AS [MonthID]
-     ,Dual(Month(Date),Num(Month(Date))) 																													AS [Month]
+     ,Dual(Month(Date),Num(Month(Date))) 																													AS [Month] 
      ,Num(Day(Date)) 																																		AS [Month Day Nbr]
      ,if(floor(Date) = floor(MonthEnd(Date)), 31,day(Date))																									AS [MTDDayNbr]
      ,Num(Month(Date)) 																																		AS [Month Nbr] 
-     ,Dual('W'&Num(Week(Date,0,0),00)&'-'& WeekStart(Date),WeekStart(Date)) 																				AS [Week Year]
+     ,Dual('W'&Num(Week(Date,0,0),00)&'-'& WeekStart(Date),WeekStart(Date)) 																				AS [Week Start]
+     ,WeekYear(Date)																																		AS [Week Year]
      ,Dual('W'&Num(Week(Date),00),Week(Date)) 																												AS [Week]
      ,Autonumber(Num(Week(Date,0,0),00)&' - '& WeekStart(Date),'Week') 																						AS [WeekID]
      ,Num(Week(Date,0,0),00)																																AS [Week Nbr]
@@ -271,11 +273,13 @@ Sub iTEC_MasterCalendar(_CalendarName, _KeyField , _MaxDate, _MinDate, _FieldLan
      ,If((WeekStart(Today(1)-$(vSc_DayOffset))-WeekStart(Date))/7 >= 0,(WeekStart(Today(1)-$(vSc_DayOffset))-WeekStart(Date))/7)							AS _PastWeeks
      ,If(Today(1)-$(vSc_DayOffset)-Date >= 0,Today(1)-$(vSc_DayOffset)-Date) 																				AS _PastDays
      ,If(DayNumberOfYear(Date) <= DayNumberOfYear(Today(1)-$(vSc_DayOffset)),1,0) 																			AS _InYTD
-     ,DayNumberOfYear(Date) 																																AS _InYTDNumberofDay
-     ,DayNumberOfYear(Today(1) )																															AS _InYTDNumberofDayToday
      ,If(DayNumberOfQuarter(Date) <= DayNumberOfQuarter(Today(1)-$(vSc_DayOffset)),1,0) 																	AS _InQTD
      ,If(Day(Date)<=Day(Today(1)-$(vSc_DayOffset)),1,0) 																									AS _InMTD
      ,If(WeekDay(Date)<=WeekDay(Today(1)-$(vSc_DayOffset)),1,0) 																							AS _InWTD
+     ,If(floor((Date)) = floor(YearEnd(Date)) or Date = '$(vSc_MaxDate)',1,0) 																				AS _IsYearEnd
+     ,If(floor((Date)) = floor(QuarterEnd(Date)) or Date = '$(vSc_MaxDate)',1,0) 																			AS _IsQuarterEnd
+     ,If(floor((Date)) = floor(MonthEnd(Date)) or Date = '$(vSc_MaxDate)',1,0) 																				AS _IsMonthEnd
+     ,If(floor((Date)) = floor(WeekEnd(Date)) or Date = '$(vSc_MaxDate)',1,0) 																				AS _IsEndofWeek
      ;
     Load
      Date(tmpDate, 'DD.MM.YYYY')																															AS 	'$(_KeyField)'	
@@ -304,6 +308,35 @@ Sub iTEC_MasterCalendar(_CalendarName, _KeyField , _MaxDate, _MinDate, _FieldLan
       Rename Field [Week Day] 					to Wochentag;
       Rename Field [Day Nbr of Year] 			to [Tagesnummer im Jahr];
   END IF;
+  
+  //Hide Technical fields
+  IF $(_ShowHideTechnicalFields) = 1 THEN
+ 	 
+     Tag fields 
+         '$(_KeyField)'
+         ,DateID
+         ,QuarterID
+         ,QTDDayNbr
+         ,MonthID
+         ,MTDDayNbr
+         ,WeekID
+         ,_PastYears
+         ,_PastQuarters 
+         ,_PastMonths
+         ,_PastWeeks
+         ,_PastDays
+         ,_InYTD
+         ,_InQTD
+         ,_InMTD
+         ,_InWTD
+         ,_IsYearEnd
+         ,_IsQuarterEnd
+         ,_IsMonthEnd
+         ,_IsEndofWeek
+     with $hidden;     
+  
+  END IF;
+  
   
   //check if Time Periods table should be loaded or not
   IF '$(_CreateTimePeriods)' = 1 THEN
