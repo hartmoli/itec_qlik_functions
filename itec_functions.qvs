@@ -1,5 +1,25 @@
 /******************************************************************************************************************************************************
 	
+    Function: 		  Store and trop tables
+    Parameters:		  _TableName				    = full name of the  Table
+                      _dropTable				  		= delete or keep table after load, 1 = delete, 0 = keep
+                    
+                       example:					iTEC_SimpleStoreDropTable('testTable',,1);
+
+**************************************************************************************************************************************************************/
+
+Sub iTEC_SimpleStoreDropTable(_TableName, _ExtractPath,_dropTable)
+  
+  STORE $(_TableName) INTO '$(_ExtractPath)/$(_TableName).qvd' (qvd);
+  
+  IF($(_dropTable)=1) THEN
+  	DROP TABLE $(_TableName);
+  END IF;
+  
+End sub;
+
+/******************************************************************************************************************************************************
+	
     Function: 		  extract tables from a DB
     Parameters:		  _dbTableName			  = full name of the db Table
     				        _fields					    = Select the fields, * = all
