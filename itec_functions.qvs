@@ -2,21 +2,89 @@
 	
     Function: 		  Store and trop tables
     Parameters:		  _TableName				    = full name of the  Table
-                      _dropTable				  		= delete or keep table after load, 1 = delete, 0 = keep
-                    
-                       example:					iTEC_SimpleStoreDropTable('testTable',,1);
+                      _ExtractPath				  	= path of the Extract Path
+                      _dropTable				  	= delete or keep table after load, 1 = delete, 0 = keep
+                      _ArchiveTable				  	= create Archive Table, 1 = delete, 0 = keep
+                      _ArchivePath				  	= path of the Archive Path
+
+                       example:					iTEC_SimpleStoreDropTable('testTable',_ExtractPath,1,1,_ArchivePath);
 
 **************************************************************************************************************************************************************/
 
-Sub iTEC_SimpleStoreDropTable(_TableName, _ExtractPath,_dropTable)
+Sub iTEC_SimpleStoreDropTable(_TableName, _ExtractPath,_dropTable,_ArchiveTable,_ArchivePath)
   
   STORE $(_TableName) INTO '$(_ExtractPath)/$(_TableName).qvd' (qvd);
+  
+  IF($(_ArchiveTable)=1) THEN
+  
+  		LET vSC_ArchivePathTimePartitioning = year(today()) &'/'& NUM(MONTH(today()),'00') &'/' &  NUM(DAY(today()),'00');
+        LET vSC_ArchiveDate = date(today(),'YYYY_MM_DD');
+        
+        STORE $(_TableName) INTO '$(_ArchivePath)/$(vSC_ArchivePathTimePartitioning)/$(_TableName)_$(vSC_ArchiveDate).qvd' (qvd);
+        
+  END IF;
+   	
   
   IF($(_dropTable)=1) THEN
   	DROP TABLE $(_TableName);
   END IF;
   
 End sub;
+
+
+	/******************************************************************************************************************************************************
+
+    Function: 		  	Join all Tables of the Datamodel towards one dedicated table 
+    
+    Description:		This subroutine joins all tables in the data model into a single target table, `_TableName`. 
+    					Automatically identifies and excludes the target table from being joined or dropped. 
+                    	 After the join, the source tables are dropped 
+    Parameters:		  	_TableName				    = full name of the  Table
+                    
+                      	 example:					iTEC_SimpleStoreDropTable('testTable');
+
+**************************************************************************************************************************************************************/
+
+SUB iTEC_JoinAllDMTableToOne(_TableName)
+
+  // Determine the total number of tables in the data model
+  LET vSC_NoOfTabels = NoOfTables() - 1;
+
+  // Initialize the list of tables to join
+  SET vSC_TableList = '';
+
+  // Iterate through all tables in the data model
+  FOR i = 0 to $(vSC_NoOfTabels)
+      let t = TableName(i);
+
+      trace TableName: '$(t)';
+
+      // Exclude the main table (_TableName) from the join process
+      IF '$(t)' <> '$(_TableName)' then 
+          // Tabelle zur Liste hinzufügen, mit Bedingung für das Trennzeichen
+          if Len('$(vSC_TableList)') = 0 then
+              LET vSC_TableList = Chr(39) & '$(t)' & Chr(39);
+          ELSE
+              LET vSC_TableList = '$(vSC_TableList),' & CHR(39) & '$(t)' & CHR(39);
+          END IF;
+      END IF;
+
+  next i;
+
+  // Join each table from the list to the target table and drop it afterwards
+  for each t in $(vSC_TableList)
+      LEFT JOIN('$(_TableName)')
+      LOAD *
+      RESIDENT [$(t)];
+
+      // DROP Table after the join
+      DROP TABLE [$(t)];
+
+  next
+
+  drop field RestFormatLink;
+
+END SUB;
 
 /******************************************************************************************************************************************************
 	
